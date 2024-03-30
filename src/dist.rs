@@ -54,17 +54,18 @@ impl Distribution for Normal
 
     fn grad(&self, traces: Vec<(Self::SampleType, f32)>) -> Self::GradType
     {
-        let mut grad: f32 = 0.0;
+        let mut grad_mu: f32 = 0.0;
+        
         let num_mutations: f32 = traces.len() as f32;
         for i in 0..traces.len()
         {
             let (sample, score) = traces[i];
             let normalized = (sample - self.mean) / self.stddev;
-            grad += normalized * score;
+            grad_mu += normalized * score;
         }
 
-        grad /= self.stddev * num_mutations;
-        grad
+        grad_mu /= self.stddev * num_mutations;
+        grad_mu
     }
 
     fn update(&mut self, grad: Self::GradType, rate: f32)
@@ -76,14 +77,15 @@ impl Distribution for Normal
 // Categorical distribution
 pub struct Categorical
 {
+    pub vo: bool,
     pub logits: Vec<f32>
 }
 
 impl Categorical
 {
-    pub fn new(logits: Vec<f32>) -> Self
+    pub fn new(vo: bool, logits: Vec<f32>) -> Self
     {
-        Self {logits}
+        Self {vo, logits}
     }
 }
 
@@ -166,12 +168,21 @@ impl Distribution for Categorical
                 let prob_j = self.log_prob(j).exp();
                 if j == sample
                 {
-                    scored_grad = prob * (1.0 - prob) * score;
+                    
+                    scored_grad = (1.0 - prob) * score;
+                    if self.vo == true
+                    {
+                        scored_grad *= prob;
+                    }
                 }
 
                 else
                 {
-                    scored_grad = -prob * prob_j * score;
+                    scored_grad = -prob_j * score;
+                    if self.vo == true
+                    {
+                        scored_grad *= prob;
+                    }
                 }
                 
                 grad[j] += scored_grad;
@@ -180,11 +191,9 @@ impl Distribution for Categorical
 
         for i in 0..grad.len()
         {
-            let prob_i = self.log_prob(i).exp();
-            grad[i] *= prob_i;
             grad[i] /= num_mutations;
         }
-
+        
         grad
     }
 

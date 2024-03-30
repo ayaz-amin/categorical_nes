@@ -89,7 +89,7 @@ fn square(x: f32) -> f32
     return x * x;
 }
 
-pub fn run_exp2() {
+pub fn run_exp2(rate: f32) {
     let root = BitMapBackend::new("charts/complex.png", (640, 480)).into_drawing_area();
     root.fill(&WHITE).unwrap();
     let mut chart = ChartBuilder::on(&root)
@@ -120,15 +120,14 @@ pub fn run_exp2() {
 
     let num_mutations = 50;
     let num_iters = 20000;
-    let rate = 0.0995;
 
-    let par_1 = dist::Categorical::new(vec![0.0; 3]);
+    let par_1 = dist::Categorical::new(false, vec![0.0; 3]);
     let par_2 = dist::Normal::new(0.0, 1.0);
-    let par_3 = dist::Categorical::new(vec![0.0; 4]);
-    let par_4 = dist::Categorical::new(vec![0.0; 4]);
+    let par_3 = dist::Categorical::new(false, vec![0.0; 4]);
+    let par_4 = dist::Categorical::new(false, vec![0.0; 4]);
     let par_5 = dist::Normal::new(0.0, 1.0);
-    let par_6 = dist::Categorical::new(vec![0.0; 4]);
-    let par_7 = dist::Categorical::new(vec![0.0; 4]);
+    let par_6 = dist::Categorical::new(false, vec![0.0; 4]);
+    let par_7 = dist::Categorical::new(false, vec![0.0; 4]);
 
     let mut holes = Holes{par_1, par_2, par_3, par_4, par_5, par_6, par_7};
     let mut logger = Vec::new();
@@ -243,15 +242,21 @@ pub fn run_exp2() {
     let prop_7 = holes.par_7.argmax() as f32;
 
     let props = vec![prop_1, prop_2, prop_3, prop_4, prop_5, prop_6, prop_7];
-
+    let mut score = 0.0;
+    
     for t in 0..test_inputs.len()
     {
         let (x1, x2) = test_inputs[t];
-        synth_outputs.push(synth_prog(x1, x2, &props));
+        let output = synth_prog(x1, x2, &props);
+        score += square(output - test_outputs[t]);
+        synth_outputs.push(output);
     }
+    score /= test_inputs.len() as f32;
 
     println!("Ground truth outputs: {:?}", test_outputs);
     println!("Induction outputs: {:?}", synth_outputs);
+    println!("Learning rate: {}", rate);
+    println!("MSE Loss: {}", score);
 
     let op_1 = hole_1_str(prop_1);
     let op_2 = hole_2_str(prop_2, prop_3, prop_4);
