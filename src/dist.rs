@@ -192,6 +192,10 @@ impl Distribution for Categorical
         for i in 0..grad.len()
         {
             grad[i] /= num_mutations;
+            if !self.vo
+            {
+                grad[i] /= (self.log_prob(i) - 1.0).powf(2.);
+            }
         }
         
         grad
